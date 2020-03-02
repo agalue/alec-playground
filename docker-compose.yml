@@ -1,0 +1,145 @@
+version: '3.4'
+
+volumes:
+  pgdata:
+    driver: local
+  esdata:
+    driver: local
+  zkdata:
+    driver: local
+  kafkadata:
+    driver: local
+
+services:
+  database:
+    container_name: postgresql
+    hostname: postgresql
+    image: postgres:11
+    ports:
+    - 5432:5432
+    volumes:
+    - pgdata:/var/lib/postgresql/data
+    environment:
+    - TZ=America/New_York
+    - POSTGRES_HOST=database
+    - POSTGRES_PORT=5432
+    - POSTGRES_USER=postgres
+    - POSTGRES_PASSWORD=postgres
+    healthcheck:
+      test: pg_isready -U postgres
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  elastic:
+    container_name: elastic
+    hostname: elastic
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.3.0
+    ports:
+    - 9200:9200
+    volumes:
+    - esdata:/usr/share/elasticsearch/data
+    environment:
+    - TZ=America/New_York
+    - cluster.name=docker-cluster
+    - node.name=elastic
+    - network.bind_host=elastic
+    - bootstrap.memory_lock=true
+    - discovery.type=single-node
+    healthcheck:
+      test: curl -f http://elastic:9200 || exit 1
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+  kibana:
+    container_name: kibana
+    hostname: kibana
+    image: docker.elastic.co/kibana/kibana:7.3.0
+    depends_on:
+    - elastic
+    ports:
+    - 5601:5601
+    environment:
+    - TZ=America/New_York
+    - ELASTICSEARCH_HOSTS=http://elastic:9200
+    healthcheck:
+      test: curl -f http://kibana:5601 || exit 1
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  zookeeper:
+    container_name: zookeeper
+    hostname: zookeeper
+    image: zookeeper:3.4
+    ports:
+    - 2181:2181
+    volumes:
+    - zkdata:/data
+    environment:
+    - TZ=America/New_York
+    - ZOO_MY_ID=1
+    - ZOO_SERVERS=server.1=zookeeper:2888:3888
+    healthcheck:
+      test: echo stat | nc zookeeper 2181
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  kafka:
+    container_name: kafka
+    hostname: kafka
+    image: wurstmeister/kafka
+    depends_on:
+    - zookeeper
+    ports:
+    - 9092:9092
+    volumes:
+    - kafkadata:/kafka
+    environment:
+    - TZ=America/New_York
+    - KAFKA_BROKER_ID=1
+    - KAFKA_ADVERTISED_HOST_NAME=192.168.205.1
+    - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181/kafka
+    - KAFKA_NUM_PARTITIONS=4
+    - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+    - KAFKA_DEFAULT_REPLICATION_FACTOR=1
+    - KAFKA_MIN_INSYNC_REPLICAS=1
+    - KAFKA_MESSAGE_MAX_BYTES=5242880
+    - KAFKA_MAX_REQUEST_SIZE=5242880
+    - KAFKA_REPLICA_FETCH_MAX_BYTES=10485760
+    - KAFKA_FETCH_MESSAGE_MAX_BYTES=10485760
+    - KAFKA_COMPRESSION_TYPE=producer
+    - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+    - KAFKA_DELETE_TOPIC_ENABLE=true
+    - KAFKA_CONTROLLED_SHUTDOWN_ENABLE=true
+    - JMX_PORT=9999
+    - KAFKA_JMX_OPTS=-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka -Dcom.sun.management.jmxremote.rmi.port=9999
+    - KAFKA_CREATE_TOPICS=OpenNMS-nodes:1:1,OpenNMS-alarms:1:1,OpenNMS-alarms-feedback:1:1,OpenNMS-topology-vertices:1:1,OpenNMS-topology-edges:1:1,OpenNMS-alec-inventory:1:1
+    healthcheck:
+      test: JMX_PORT="" kafka-topics.sh --zookeeper zookeeper:2181/kafka --list 2>&1 | grep OpenNMS
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  kafka-manager:
+    container_name: kafka-manager
+    hostname: kafka-manager
+    image: hlebalbau/kafka-manager:stable
+    depends_on:
+    - kafka
+    ports:
+    - 9000:9000
+    environment:
+    - TZ=America/New_York
+    - ZK_HOSTS=zookeeper:2181
+    healthcheck:
+      test: wget --quiet --tries=1 --spider http://kafka-manager:9000 || exit 1
+      interval: 30s
+      timeout: 30s
+      retries: 3
