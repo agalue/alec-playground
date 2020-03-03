@@ -1,7 +1,7 @@
 Test Environment for ALEC
 ===
 
-The following builds a test environment to test ALEC in distributed mode.
+The following builds a test environment to test ALEC in either monolithic or distributed mode.
 
 # Requirements
 
@@ -39,6 +39,9 @@ common = {
 ```bash
 vagrant up
 ```
+
+> *NOTE*: To start in `monolithic` mode, edit the `Vagrantfile` file and replace the `distributed` variable to be false.
+>         On distributed mode, a set of sentinels (2 by default) will be launched.
 
 4. Configure requisition
 
@@ -100,7 +103,7 @@ sleep 5
 echo "<189>: $(date +"%Y %b %d %H:%m:%S %Z"): %PKT_INFRA-LINEPROTO-5-UPDOWN: Line protocol on Interface $IFDESCR, changed state to Down" | nc -v -u $ONMS_SERVER 10514
 ```
 
-## From the Sentinel Karaf Shell
+## From the Karaf shell in OpenNMS (for monolithic) or Sentinel (for distributed)
 
 ```bash
 admin@sentinel> opennms-alec:list-graphs

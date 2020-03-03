@@ -3,10 +3,11 @@
 # Designed for CentOS/RHEL 7
 # Author: Alejandro Galue <agalue@opennms.org>
 
-ONMS_REPO_NAME="${1-stable}"
-PG_SERVER="${2-192.168.205.1:5432}"
-KAFKA_SERVER="${3-192.168.205.1:9092}"
-ES_SERVER="${4-192.168.205.1:9200}"
+DISTRIBUTED="${1-false}"
+ONMS_REPO_NAME="${2-stable}"
+PG_SERVER="${3-192.168.205.1:5432}"
+KAFKA_SERVER="${4-192.168.205.1:9092}"
+ES_SERVER="${5-192.168.205.1:9200}"
 
 # Install OpenNMS dependencies
 
@@ -26,8 +27,8 @@ fi
 # Install OpenNMS Core and Helm
 
 if ! rpm -qa | grep -q opennms-core; then
-  sudo yum install -y -q http://yum.opennms.org/repofiles/opennms-repo-$ONMS_REPO_NAME-rhel7.noarch.rpm
-  sudo rpm --import /etc/yum.repos.d/opennms-repo-$ONMS_REPO_NAME-rhel7.gpg
+  sudo yum install -y -q http://yum.opennms.org/repofiles/opennms-repo-"$ONMS_REPO_NAME"-rhel7.noarch.rpm
+  sudo rpm --import /etc/yum.repos.d/opennms-repo-"$ONMS_REPO_NAME}"-rhel7.gpg
   sudo yum install -y -q opennms-core opennms-webapp-jetty opennms-webapp-hawtio
   sudo yum install -y -q opennms-helm
 fi
@@ -44,13 +45,13 @@ ONMS_HOME=/opt/opennms
 ONMS_ETC=$ONMS_HOME/etc
  
 if [ ! -f "$ONMS_ETC/configured" ]; then
-  cd $ONMS_ETC
+  cd $ONMS_ETC || exit
   sudo git init .
   sudo git add .
   sudo git commit -m "Default OpenNMS configuration for repository $ONMS_REPO_NAME."
 
   TOTAL_MEM_IN_MB=$(free -m | awk '/:/ {print $2;exit}')
-  MEM_IN_MB=$(expr $TOTAL_MEM_IN_MB / 2)
+  MEM_IN_MB=$((TOTAL_MEM_IN_MB / 2))
   if [ "$MEM_IN_MB" -gt "30720" ]; then
     MEM_IN_MB="30720"
   fi
@@ -98,8 +99,12 @@ EOF
   FEATURES_LIST="opennms-alarm-history-elastic,opennms-kafka-producer,opennms-es-rest,opennms-situation-feedback"
   sudo sed -r -i "s/^  $LAST_ENTRY.*/  $FEATURES_LIST,$LAST_ENTRY/" $ONMS_ETC/org.apache.karaf.features.cfg
 
+  ALEC_FEATURE="alec-opennms-standalone"
+  if [ "$DISTRIBUTED" = "true" ]; then
+    ALEC_FEATURE="alec-opennms-distributed"
+  fi
   cat <<EOF | sudo tee $ONMS_ETC/featuresBoot.d/alec.boot
-alec-opennms-distributed wait-for-kar=opennms-alec-plugin
+$ALEC_FEATURE wait-for-kar=opennms-alec-plugin
 EOF
 
   cat <<EOF | sudo tee $ONMS_ETC/opennms.properties.d/event-sink.properties
@@ -137,7 +142,7 @@ EOF
 bootstrap.servers=$KAFKA_SERVER
 EOF
 
-  cat <<EOF | sudo tee $ONMS_ETC/org.opennms.features.situation-feedback.persistence.elastic">
+  cat <<EOF | sudo tee $ONMS_ETC/org.opennms.features.situation-feedback.persistence.elastic.cfg
 elasticUrl=http://$ES_SERVER
 elasticIndexStrategy=monthly
 connTimeout=30000

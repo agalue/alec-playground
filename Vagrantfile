@@ -2,11 +2,12 @@
 # vi: set ft=ruby :
 
 common = {
-  :branch    => "stable",
-  :kafka     => "192.168.205.1:9092",
-  :zookeeper => "192.168.205.1:2181",
-  :elastic   => "192.168.205.1:9200",
-  :postgres  => "192.168.205.1:5432"
+  :distributed => false,
+  :branch      => "stable",
+  :kafka       => "192.168.205.1:9092",
+  :zookeeper   => "192.168.205.1:2181",
+  :elastic     => "192.168.205.1:9200",
+  :postgres    => "192.168.205.1:5432"
 }
 
 minion = {
@@ -25,21 +26,23 @@ opennms = {
   :cpu  => "2"
 }
 
-sentinel1 = {
-  :name => "OpenNMS-ALEC-Sentinel-1",
-  :host => "sentinel01.local",
-  :ip   => "192.168.205.171",
-  :mem  => "2048",
-  :cpu  => "1"
-}
-
-sentinel2 = {
-  :name => "OpenNMS-ALEC-Sentinel-2",
-  :host => "sentinel02.local",
-  :ip   => "192.168.205.172",
-  :mem  => "2048",
-  :cpu  => "1"
-}
+sentinels = [
+  {
+    :id   => "sentinel1",
+    :name => "OpenNMS-ALEC-Sentinel-1",
+    :host => "sentinel01.local",
+    :ip   => "192.168.205.171",
+    :mem  => "2048",
+    :cpu  => "1"
+  },{
+    :id   => "sentinel2",
+    :name => "OpenNMS-ALEC-Sentinel-2",
+    :host => "sentinel02.local",
+    :ip   => "192.168.205.172",
+    :mem  => "2048",
+    :cpu  => "1"
+  }
+]
 
 test = {
   :name => "OpenNMS-Test-Server",
@@ -62,9 +65,10 @@ Vagrant.configure("2") do |config|
     config.vm.provision "common", type: "shell" do |s|
       s.path = "scripts/common-centos7.sh"
     end
+    distributed = common[:distributed] ? "true" : "false"
     config.vm.provision "opennms", type: "shell" do |s|
       s.path = "scripts/opennms-centos7.sh"
-      s.args = [ common[:branch], common[:postgres], common[:kafka], common[:elastic] ]
+      s.args = [ distributed, common[:branch], common[:postgres], common[:kafka], common[:elastic] ]
     end
   end
 
@@ -86,39 +90,25 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "sentinel1" do |config|
-    config.vm.hostname = sentinel1[:host]
-    config.vm.provider "virtualbox" do |v|
-      v.name = sentinel1[:name]
-      v.customize [ "modifyvm", :id, "--cpus", sentinel1[:cpu] ]
-      v.customize [ "modifyvm", :id, "--memory", sentinel1[:mem] ]
-      v.default_nic_type = "virtio"
-    end
-    config.vm.network "private_network", ip: sentinel1[:ip]
-    config.vm.provision "common", type: "shell" do |s|
-      s.path = "scripts/common-centos7.sh"
-    end
-    config.vm.provision "opennms", type: "shell" do |s|
-      s.path = "scripts/sentinel-centos7.sh"
-      s.args = [ common[:branch], opennms[:ip] + ":8980", common[:kafka], common[:zookeeper] ]
-    end
-  end
-
-  config.vm.define "sentinel2" do |config|
-    config.vm.hostname = sentinel2[:host]
-    config.vm.provider "virtualbox" do |v|
-      v.name = sentinel2[:name]
-      v.customize [ "modifyvm", :id, "--cpus", sentinel2[:cpu] ]
-      v.customize [ "modifyvm", :id, "--memory", sentinel2[:mem] ]
-      v.default_nic_type = "virtio"
-    end
-    config.vm.network "private_network", ip: sentinel2[:ip]
-    config.vm.provision "common", type: "shell" do |s|
-      s.path = "scripts/common-centos7.sh"
-    end
-    config.vm.provision "opennms", type: "shell" do |s|
-      s.path = "scripts/sentinel-centos7.sh"
-      s.args = [ common[:branch], opennms[:ip] + ":8980", common[:kafka], common[:zookeeper] ]
+  if common[:distributed] == true
+    sentinels.each do |sentinel|
+      config.vm.define sentinel[:id] do |config|
+        config.vm.hostname = sentinel[:host]
+        config.vm.provider "virtualbox" do |v|
+          v.name = sentinel[:name]
+          v.customize [ "modifyvm", :id, "--cpus", sentinel[:cpu] ]
+          v.customize [ "modifyvm", :id, "--memory", sentinel[:mem] ]
+          v.default_nic_type = "virtio"
+        end
+        config.vm.network "private_network", ip: sentinel[:ip]
+        config.vm.provision "common", type: "shell" do |s|
+          s.path = "scripts/common-centos7.sh"
+        end
+        config.vm.provision "opennms", type: "shell" do |s|
+          s.path = "scripts/sentinel-centos7.sh"
+          s.args = [ common[:branch], opennms[:ip] + ":8980", common[:kafka], common[:zookeeper] ]
+        end
+      end
     end
   end
 
