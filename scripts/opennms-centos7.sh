@@ -101,7 +101,8 @@ EOF
 
   LAST_ENTRY="opennms-karaf-health"
   FEATURES_LIST="opennms-alarm-history-elastic,opennms-kafka-producer,opennms-es-rest,opennms-situation-feedback"
-  sudo sed -r -i "s/.*$LAST_ENTRY.*/  $FEATURES_LIST,$LAST_ENTRY/" $ONMS_ETC/org.apache.karaf.features.cfg
+  sudo sed -r -i "s/^  $LAST_ENTRY.*/  $FEATURES_LIST,$LAST_ENTRY/" $ONMS_ETC/org.apache.karaf.features.cfg
+
   cat <<EOF | sudo tee $ONMS_ETC/featuresBoot.d/alec.boot
 alec-opennms-distributed wait-for-kar=opennms-alec-plugin
 EOF
