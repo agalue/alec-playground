@@ -11,7 +11,6 @@ ZOOKEEPER_SERVER="${4-192.168.205.1:2181}"
 # Install OpenNMS Sentinel
 
 if ! rpm -qa | grep -q opennms-sentinel; then
-  echo "Installing OpenNMS from '$ONMS_REPO_NAME' repository..."
   sudo yum install -y -q http://yum.opennms.org/repofiles/opennms-repo-$ONMS_REPO_NAME-rhel7.noarch.rpm
   sudo rpm --import /etc/yum.repos.d/opennms-repo-$ONMS_REPO_NAME-rhel7.gpg
   sudo yum install -y -q opennms-sentinel
@@ -20,13 +19,11 @@ fi
 # Install ALEC
 
 if ! rpm -qa | grep -q sentinel-alec-plugin; then
-  echo "Installing ALEC Plugin for Sentinel..."
   sudo yum install -y -q sentinel-alec-plugin
 fi
 
 # Configure Sentinel
 
-echo "Configuring Java Heap..."
 TOTAL_MEM_IN_MB=$(free -m | awk '/:/ {print $2;exit}')
 MEM_IN_MB=$(expr $TOTAL_MEM_IN_MB / 2)
 if [ "$MEM_IN_MB" -gt "8192" ]; then
@@ -38,7 +35,6 @@ sudo sed -r -i "/export JAVA_HOME/s/.*/export JAVA_HOME=\/usr\/lib\/jvm\/java/" 
 
 SENTINEL_HOME=/opt/sentinel
 SENTINEL_ETC=$SENTINEL_HOME/etc
-echo "Configuring Sentinel..."
 
 if [ ! -f "$SENTINEL_ETC/configured" ]; then
   cd $SENTINEL_ETC

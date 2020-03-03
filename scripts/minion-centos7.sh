@@ -9,8 +9,8 @@ KAFKA_SERVER="${3-192.168.205.1:9092}"
  
 # Install OpenNMS Minion packages
 
-if [ ! -d "/opt/opennms" ]; then
-  echo "Installing Minion from '$ONMS_REPO_NAME' repository..."
+if ! rpm -qa | grep -q opennms-minion; then
+
   sudo yum install -y -q http://yum.opennms.org/repofiles/opennms-repo-$ONMS_REPO_NAME-rhel7.noarch.rpm
   sudo rpm --import /etc/yum.repos.d/opennms-repo-$ONMS_REPO_NAME-rhel7.gpg
   sudo yum install -y -q opennms-minion
@@ -18,7 +18,6 @@ fi
 
 # Configure Minion
 
-echo "Configuring Java Heap..."
 TOTAL_MEM_IN_MB=$(free -m | awk '/:/ {print $2;exit}')
 MEM_IN_MB=$(expr $TOTAL_MEM_IN_MB / 2)
 if [ "$MEM_IN_MB" -gt "8192" ]; then
@@ -30,7 +29,6 @@ sudo sed -r -i "/export JAVA_HOME/s/.*/export JAVA_HOME=\/usr\/lib\/jvm\/java/" 
 
 MINION_HOME=/opt/minion
 MINION_ETC=$MINION_HOME/etc
-echo "Configuring Minion..."
 
 if [ ! -f "$MINION_ETC/configured" ]; then
   cd $MINION_ETC
