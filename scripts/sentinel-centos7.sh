@@ -65,10 +65,6 @@ EOF
 connectString=$ZOOKEEPER_SERVER
 EOF
 
-  cat <<EOF | sudo tee $SENTINEL_ETC/featuresBoot.d/hawtio.boot
-hawtio-offline
-EOF
-
   cat <<EOF | sudo tee $SENTINEL_ETC/org.opennms.core.ipc.sink.kafka.consumer.cfg
 bootstrap.servers=$KAFKA_SERVER
 EOF
