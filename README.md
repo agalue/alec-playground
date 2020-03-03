@@ -1,11 +1,7 @@
 Test Environment for ALEC
 ===
 
-The following link provides a detailed step by step pralecdure on how to install and configure all the components to have an up and running ALEC environment.
-
-https://hackmd.io/HZZG6NU0QtiUhf6gjYGu9w
-
-The following is just a simplifying guide, in terms of deploying the infrastructure on your local machine.
+The following builds a test environment to test ALEC in distributed mode.
 
 # Requirements
 

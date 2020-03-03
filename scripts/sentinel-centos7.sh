@@ -55,6 +55,19 @@ EOF
 
   sed -r -i '/sshHost/s/127.0.0.1/0.0.0.0/' $SENTINEL_ETC/org.apache.karaf.shell.cfg
 
+  cat <<EOF | sudo tee $SENTINEL_HOME/deploy/features.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<features name="optional-dependencies"
+  xmlns="http://karaf.apache.org/xmlns/features/v1.4.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.4.0 http://karaf.apache.org/xmlns/features/v1.4.0">
+  <repository>mvn:io.hawt/hawtio-karaf/2.0.0/xml/features</repository>
+  <feature name="autostart-hawtio" description="Hawtio :: Auto-Start" version="2.0.0" start-level="200" install="auto">
+    <feature>hawtio-offline</feature>
+  </feature>
+</features>
+EOF
+
   cat <<EOF | sudo tee $SENTINEL_ETC/featuresBoot.d/alec.boot
 sentinel-core
 sentinel-coordination-zookeeper
@@ -98,3 +111,5 @@ EOF
   sudo service sentinel start
   sudo touch $SENTINEL_ETC/configured
 fi
+
+echo "Done!"

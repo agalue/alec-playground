@@ -81,3 +81,4 @@ EOF
   sudo touch $MINION_ETC/configured
 fi
 
+echo "Done!"

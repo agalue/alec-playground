@@ -100,8 +100,29 @@ EOF
   sudo sed -r -i '/sshHost/s/127.0.0.1/0.0.0.0/' $ONMS_ETC/org.apache.karaf.shell.cfg
 
   LAST_ENTRY="opennms-karaf-health"
-  FEATURES_LIST="opennms-alarm-history-elastic,opennms-kafka-producer,opennms-es-rest,opennms-situation-feedback"
+  FEATURES_LIST="opennms-alarm-history-elastic,opennms-kafka-producer,opennms-es-rest"
   sudo sed -r -i "s/^  $LAST_ENTRY.*/  $FEATURES_LIST,$LAST_ENTRY/" $ONMS_ETC/org.apache.karaf.features.cfg
+
+  cat <<EOF | sudo tee $ONMS_HOME/deploy/features.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<features name="additional-features"
+  xmlns="http://karaf.apache.org/xmlns/features/v1.4.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.4.0 http://karaf.apache.org/xmlns/features/v1.4.0">
+  <feature name="autostart-situation-feedback" description="Situation Feedback :: Auto-Start" version="1.0.0" start-level="200" install="auto">
+    <config name="org.opennms.features.situation-feedback.persistence.elastic">
+      elasticUrl=http://$ES_SERVER
+      elasticIndexStrategy=monthly
+      connTimeout=30000
+      readTimeout=300000
+      # The following settings should be consistent with your ES cluster
+      settings.index.number_of_shards=1
+      settings.index.number_of_replicas=0
+    </config>
+    <feature>opennms-situation-feedback</feature>
+  </feature>
+</features>
+EOF
 
   cat <<EOF | sudo tee $ONMS_ETC/featuresBoot.d/alec.boot
 alec-opennms-distributed wait-for-kar=opennms-alec-plugin
@@ -231,9 +252,6 @@ EOF
     curl -u $GRAFANA_AUTH -H 'Content-Type: application/json' -XPOST -d @$JSON_FILE $DS_URL 2>/dev/null
   fi
   sudo rm -f $JSON_FILE
-
-  sleep 120
-  /vagrant/scripts/fix-situations-feedback.sh
 fi
 
 echo "Done!"
