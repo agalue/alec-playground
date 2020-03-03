@@ -17,9 +17,11 @@ The following builds a test environment to test ALEC in distributed mode.
 docker-compose up -d
 ```
 
-> **WARNING**: All the topics must exist prior starting the ALEC engine. This is why the Kafka image will create the required topics. This is missing on the official documents. The required topics are: `OpenNMS-nodes`, `OpenNMS-alarms`, `OpenNMS-alarms-feedback`, `OpenNMS-topology-edges`, and `OpenNMS-alec-inventory`.
+Wait until all the services are healthy (use the `docker-compose ps` to verify if that's the case).
 
-2. Update the IP addresses for Kafka, Elasticsearch and PostgreSQl on the `Vagrantfile`.
+> **WARNING**: All the topics must exist prior starting the ALEC engine. This is why the Kafka image will create the required topics. This is missing on the official documentation. The required topics are: `OpenNMS-nodes`, `OpenNMS-alarms`, `OpenNMS-alarms-feedback`, `OpenNMS-topology-edges`, and `OpenNMS-alec-inventory`.
+
+2. [Optional] Update the IP addresses for Kafka, Elasticsearch and PostgreSQl on the `Vagrantfile`.
 
 For example, if the host machine IP where all these services are exposed to is `192.168.205.1`:
 
@@ -64,9 +66,9 @@ provision.pl requisition import Test
 
 ```bash
 admin@opennms> bundle:list | grep ALEC
-355 │ Active   │  80 │ 1.0.0          │ ALEC :: Integrations :: OpenNMS :: Config
-356 │ Active   │  80 │ 1.0.0          │ ALEC :: Integrations :: OpenNMS :: Extension
-357 │ Active   │  80 │ 1.0.0          │ ALEC :: Integrations :: OpenNMS :: Model
+355 │ Active   │  80 │ 1.0.2          │ ALEC :: Integrations :: OpenNMS :: Config
+356 │ Active   │  80 │ 1.0.2          │ ALEC :: Integrations :: OpenNMS :: Extension
+357 │ Active   │  80 │ 1.0.2          │ ALEC :: Integrations :: OpenNMS :: Model
 ```
 
 2. Verify that the events configuration from the Integrations API was loaded:
