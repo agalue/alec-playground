@@ -11,7 +11,6 @@ ES_SERVER="${4-192.168.205.1:9200}"
 # Install OpenNMS dependencies
 
 if ! rpm -qa | grep -q jicmp; then
-  echo "Installing OpenNMS dependencies ..."
   sudo yum install -y -q http://yum.opennms.org/repofiles/opennms-repo-stable-rhel7.noarch.rpm
   sudo rpm --import /etc/yum.repos.d/opennms-repo-stable-rhel7.gpg
   sudo yum install -y -q jicmp jicmp6 jrrd jrrd2 rrdtool 'perl(LWP)' 'perl(XML::Twig)'
@@ -21,14 +20,12 @@ fi
 # Install Grafana
 
 if ! rpm -qa | grep -q grafana; then
-  echo "Installing Grafana..."
-  sudo yum install -y -q https://dl.grafana.com/oss/release/grafana-6.6.2-1.x86_64.rpm
+  sudo yum install -y -q https://dl.grafana.com/oss/release/grafana-6.6.1-1.x86_64.rpm
 fi
 
 # Install OpenNMS Core and Helm
 
 if ! rpm -qa | grep -q opennms-core; then
-  echo "Installing OpenNMS from '$ONMS_REPO_NAME' repository..."
   sudo yum install -y -q http://yum.opennms.org/repofiles/opennms-repo-$ONMS_REPO_NAME-rhel7.noarch.rpm
   sudo rpm --import /etc/yum.repos.d/opennms-repo-$ONMS_REPO_NAME-rhel7.gpg
   sudo yum install -y -q opennms-core opennms-webapp-jetty opennms-webapp-hawtio
@@ -38,7 +35,6 @@ fi
 # Install ALEC
 
 if ! rpm -qa | grep -q opennms-alec-plugin; then
-  echo "Installing ALEC Plugin for OpenNMS..."
   sudo yum install -y -q opennms-alec-plugin
 fi
 
@@ -46,7 +42,6 @@ fi
 
 ONMS_HOME=/opt/opennms
 ONMS_ETC=$ONMS_HOME/etc
-echo "Configuring OpenNMS..."
  
 if [ ! -f "$ONMS_ETC/configured" ]; then
   cd $ONMS_ETC
@@ -100,29 +95,8 @@ EOF
   sudo sed -r -i '/sshHost/s/127.0.0.1/0.0.0.0/' $ONMS_ETC/org.apache.karaf.shell.cfg
 
   LAST_ENTRY="opennms-karaf-health"
-  FEATURES_LIST="opennms-alarm-history-elastic,opennms-kafka-producer,opennms-es-rest"
+  FEATURES_LIST="opennms-alarm-history-elastic,opennms-kafka-producer,opennms-es-rest,opennms-situation-feedback"
   sudo sed -r -i "s/^  $LAST_ENTRY.*/  $FEATURES_LIST,$LAST_ENTRY/" $ONMS_ETC/org.apache.karaf.features.cfg
-
-  cat <<EOF | sudo tee $ONMS_HOME/deploy/features.xml
-<?xml version="1.0" encoding="UTF-8"?>
-<features name="additional-features"
-  xmlns="http://karaf.apache.org/xmlns/features/v1.4.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.4.0 http://karaf.apache.org/xmlns/features/v1.4.0">
-  <feature name="autostart-situation-feedback" description="Situation Feedback :: Auto-Start" version="1.0.0" start-level="200" install="auto">
-    <config name="org.opennms.features.situation-feedback.persistence.elastic">
-      elasticUrl=http://$ES_SERVER
-      elasticIndexStrategy=monthly
-      connTimeout=30000
-      readTimeout=300000
-      # The following settings should be consistent with your ES cluster
-      settings.index.number_of_shards=1
-      settings.index.number_of_replicas=0
-    </config>
-    <feature>opennms-situation-feedback</feature>
-  </feature>
-</features>
-EOF
 
   cat <<EOF | sudo tee $ONMS_ETC/featuresBoot.d/alec.boot
 alec-opennms-distributed wait-for-kar=opennms-alec-plugin
@@ -163,11 +137,9 @@ EOF
 bootstrap.servers=$KAFKA_SERVER
 EOF
 
-  cat <<EOF | sudo tee $ONMS_ETC/org.opennms.features.alarms.history.elastic.cfg
+  cat <<EOF | sudo tee $ONMS_ETC/org.opennms.features.situation-feedback.persistence.elastic">
 elasticUrl=http://$ES_SERVER
 elasticIndexStrategy=monthly
-nodeCache.maximumSize=5000
-nodeCache.expireAfterWrite=3600
 connTimeout=30000
 readTimeout=300000
 # The following settings should be consistent with your ES cluster
@@ -175,10 +147,11 @@ settings.index.number_of_shards=1
 settings.index.number_of_replicas=0
 EOF
 
-  # TODO This is not working for some reason. It has to be reconfigured after installing the feature
-  cat <<EOF | sudo tee $ONMS_ETC/org.opennms.features.situation-feedback.persistence.elastic.cfg
+  cat <<EOF | sudo tee $ONMS_ETC/org.opennms.features.alarms.history.elastic.cfg
 elasticUrl=http://$ES_SERVER
 elasticIndexStrategy=monthly
+nodeCache.maximumSize=5000
+nodeCache.expireAfterWrite=3600
 connTimeout=30000
 readTimeout=300000
 # The following settings should be consistent with your ES cluster
