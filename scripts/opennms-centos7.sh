@@ -20,7 +20,7 @@ fi
 # Install Grafana
 
 if ! rpm -qa | grep -q grafana; then
-  sudo yum install -y -q https://dl.grafana.com/oss/release/grafana-6.6.1-1.x86_64.rpm
+  sudo yum install -y -q https://dl.grafana.com/oss/release/grafana-6.5.3-1.x86_64.rpm
 fi
 
 # Install OpenNMS Core and Helm
